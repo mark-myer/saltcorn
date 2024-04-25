@@ -1066,11 +1066,11 @@ router.get(
             type: "card",
             title: req.__("About the system"),
             contents: div(
-              h4(req.__("About Saltcorn")),
+              h4(req.__("About Spark")),
               table(
                 tbody(
                   tr(
-                    th(req.__("Saltcorn version")),
+                    th(req.__("Spark version")),
                     td(
                       packagejson.version +
                         (isRoot && can_update
@@ -1161,7 +1161,7 @@ router.get(
               p(
                 { class: "mt-3" },
                 req.__(
-                  `Saltcorn is <a href="https://www.gnu.org/philosophy/free-sw.en.html">Free</a> and <a href="https://opensource.org/">Open Source</a> Software, <a href="https://github.com/saltcorn/saltcorn/">released</a> under the <a href="https://github.com/saltcorn/saltcorn/blob/master/LICENSE">MIT license</a>.`
+                  ``
                 )
               )
             ),
@@ -1925,7 +1925,7 @@ router.get(
                         class: "form-control",
                         name: "appName",
                         id: "appNameInputId",
-                        placeholder: "SaltcornMobileApp",
+                        placeholder: "SparkMobileApp",
                         value: builderSettings.appName || "",
                       })
                     )
