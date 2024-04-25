@@ -1,10 +1,10 @@
 #! /usr/bin/env node
 /**
- * npx saltcorn-install
+ * npx spark-install
  *
- * Script intended to quick install of Saltcorn to server.
+ * Script intended to quick install of Spark server.
  *
- * Script creates basic  infrastructure for Saltcorn including database installation,
+ * Script creates basic  infrastructure for Spark including database installation,
  * system service creation and os user creation.
  *
  * @type {path.PlatformPath | path}
@@ -32,11 +32,11 @@ const {
 const isRoot = process.getuid && process.getuid() === 0;
 
 if (process.argv.includes("--help")) {
-  console.log("Install saltcorn\n");
+  console.log("Install Spark\n");
   console.log("OPTIONS:");
   console.log(
     "  -y, --yes\tNon-interactive, accept all defaults: \n" +
-      "\t\tLocal PostgreSQL, saltcorn user, port 80, create systemd unit\n" +
+      "\t\tLocal PostgreSQL, Spark user, port 80, create systemd unit\n" +
       "  -v, --verbose\tVerbose mode, show debug information\n" +
       "  -e, --expert\tExpert mode, more abilities for configuration (Not compatible with -y)\n" +
       "  -d, --dryrun\tDry Run mode, displays the operations that would be performed using the specified command without actually running them\n" +
@@ -53,7 +53,7 @@ const skipChromium =
   process.argv.includes("-s") || process.argv.includes("--skip-chromium");
 
 /**
- * Define saltcorn config dir and path
+ * Define Spark config dir and path
  * @param user
  * @returns {{configFilePath: string, configFileDir: string}}
  */
@@ -65,11 +65,11 @@ const get_paths = (user) => {
   else if (me !== user)
     configFileDir = configFileDir.replace(`/${me}/`, `/${user}/`);
 
-  const configFilePath = path.join(configFileDir, ".saltcorn");
+  const configFilePath = path.join(configFileDir, ".spark");
   return { configFileDir, configFilePath };
 };
 /**
- * Write configuration file ${user}/.config/.saltcorn
+ * Write configuration file ${user}/.config/.spark
  * @param connobj - DB connection object
  * @param user - OS user
  * @param dryRun
@@ -80,10 +80,10 @@ const write_connection_config = async (connobj, user, dryRun) => {
   await asyncSudo(["mkdir", "-p", configFileDir], false, dryRun);
   await asyncSudo(["chown", `${user}:${user}`, configFileDir], false, dryRun);
   if (!dryRun)
-    fs.writeFileSync("/tmp/.saltcorn", JSON.stringify(connobj), {
+    fs.writeFileSync("/tmp/.spark", JSON.stringify(connobj), {
       mode: 0o600,
     });
-  await asyncSudo(["mv", "/tmp/.saltcorn", configFilePath], false, dryRun);
+  await asyncSudo(["mv", "/tmp/.spark", configFilePath], false, dryRun);
   await asyncSudo(["chown", `${user}:${user}`, configFilePath], false, dryRun);
 };
 /**
@@ -91,23 +91,23 @@ const write_connection_config = async (connobj, user, dryRun) => {
  * @returns {Promise<string|*>}
  */
 const askUserNonExpertMode = async () => {
-  if (yes) return "saltcorn";
-  if (isRoot) return "saltcorn";
+  if (yes) return "spark";
+  if (isRoot) return "spark";
   const me = os.userInfo().username;
-  if (me === "saltcorn") return "saltcorn";
+  if (me === "spark") return "spark";
 
   const responses = await inquirer.prompt([
     {
       name: "user",
-      message: "Which user will run Saltcorn?",
+      message: "Which user will run Spark?",
       type: "list",
       choices: [
         {
-          name: "Create a new user: saltcorn",
-          value: "saltcorn",
+          name: "Create a new user: spark",
+          value: "spark",
         },
         {
-          name: `This user will run saltcorn: ${me}`,
+          name: `This user will run spark: ${me}`,
           value: me,
         },
       ],
@@ -120,13 +120,13 @@ const askUserNonExpertMode = async () => {
  * @returns {Promise<string|*>}
  */
 const askUser = async () => {
-  let user = "saltcorn";
+  let user = "spark";
   if (!expert) return await askUserNonExpertMode();
 
   const responses = await inquirer.prompt([
     {
       name: "user",
-      message: "Which OS user will run Saltcorn?",
+      message: "Which OS user will run Spark?",
       type: "input",
       default: user,
     },
@@ -138,13 +138,13 @@ const askUser = async () => {
  * @returns {Promise<string|*>}
  */
 const askDatabaseName = async () => {
-  let dbName = "saltcorn";
+  let dbName = "spark";
   if (!expert) return dbName;
 
   const responses = await inquirer.prompt([
     {
       name: "dbName",
-      message: "Which database name will be used for Saltcorn?",
+      message: "Which database name will be used for Spark?",
       type: "input",
       default: dbName,
     },
@@ -167,7 +167,7 @@ const askDatabase = async () => {
   const responses = await inquirer.prompt([
     {
       name: "database",
-      message: "To which database will Saltcorn connect?",
+      message: "To which database will Spark connect?",
       type: "list",
       choices: [
         {
@@ -198,7 +198,7 @@ const askDevServer = async (db) => {
   const responses = await inquirer.prompt([
     {
       name: "mode",
-      message: "How will you run Saltcorn?",
+      message: "How will you run Spark?",
       type: "list",
       choices: [
         {
@@ -206,7 +206,7 @@ const askDevServer = async (db) => {
           value: "server",
         },
         {
-          name: "Development mode. I will start Saltcorn when needed",
+          name: "Development mode. I will start Spark when needed",
           value: "dev",
         },
       ],
@@ -227,7 +227,7 @@ const askHttpPort = async (mode) => {
   const responses = await inquirer.prompt([
     {
       name: "port",
-      message: "Port Saltcorn HTTP server will listen on?",
+      message: "Port Spark HTTP server will listen on?",
       type: "number",
       default: port,
     },
@@ -239,13 +239,13 @@ const askHttpPort = async (mode) => {
  * @returns {Promise<string|*>}
  */
 const askOsService = async () => {
-  let osService = "saltcorn";
+  let osService = "spark";
   if (!expert) return osService;
 
   const responses = await inquirer.prompt([
     {
       name: "osService",
-      message: "Which System Service name will be used for Saltcorn?",
+      message: "Which System Service name will be used for Spark?",
       type: "input",
       default: osService,
     },
@@ -363,7 +363,7 @@ const installSystemPackages = async (osInfo, user, db, mode, port, dryRun) => {
   }
 };
 /**
- * Install Saltcorn
+ * Install Spark
  * @param osInfo
  * @param user
  * @param db -
@@ -372,15 +372,15 @@ const installSystemPackages = async (osInfo, user, db, mode, port, dryRun) => {
  * @param dryRun
  * @returns {Promise<void>}
  */
-const installSaltcorn = async (osInfo, user, db, mode, port, dryRun) => {
+const installSpark = async (osInfo, user, db, mode, port, dryRun) => {
   /*
-adduser --disabled-password --gecos "" saltcorn
-sudo -iu saltcorn mkdir -p /home/saltcorn/.config/
-sudo -iu saltcorn npm config set prefix /home/saltcorn/.local
-sudo -iu saltcorn NODE_ENV=production npm install -g @saltcorn/cli@latest --unsafe
-echo 'export PATH=/home/saltcorn/.local/bin:$PATH' >> /home/saltcorn/.bashrc
+adduser --disabled-password --gecos "" spark
+sudo -iu spark mkdir -p /home/spark/.config/
+sudo -iu spark npm config set prefix /home/spark/.local
+sudo -iu spark NODE_ENV=production npm install -g @spark/cli@latest --unsafe
+echo 'export PATH=/home/spark/.local/bin:$PATH' >> /home/spark/.bashrc
  */
-  //if (user === "saltcorn")
+  //if (user === "spark")
   const isSUSE = osInfo.distro.includes("SUSE");
   if (user !== "root") {
     if (isSUSE) await asyncSudo(["groupadd", user], true, dryRun);
@@ -474,7 +474,7 @@ const handleCordovaBuilder = async (user, dryRun) => {
   console.log();
   if (!yes) {
     console.log(
-      "Saltcorn is now installed, but before you finish, you could set up the cordova-builder docker image."
+      "Spark is now installed, but before you finish, you could set up the cordova-builder docker image."
     );
     console.log(
       "This image has all needed dependencies to build Android mobile apps."
@@ -485,7 +485,7 @@ const handleCordovaBuilder = async (user, dryRun) => {
     );
   } else {
     console.log(
-      "saltcorn is now installed, trying to set up the cordova-builder docker image."
+      "Spark is now installed, trying to set up the cordova-builder docker image."
     );
     console.log(
       "This image has all needed dependencies to build Android mobile apps."
@@ -561,7 +561,7 @@ const handleCordovaBuilder = async (user, dryRun) => {
     console.log();
     console.log("Pulling the Cordova builder image.");
     console.log(
-      "This might take some time, but the Saltcorn server is already running, " +
+      "This might take some time, but Spark server is already running, " +
         "and you can open the 'Mobile builder' menu to check if the image is available."
     );
     console.log();
@@ -581,7 +581,7 @@ const handleCordovaBuilder = async (user, dryRun) => {
 (async () => {
   // get OS info
   const osInfo = await si.osInfo();
-  // for me (only if not root) or create saltcorn user
+  // for me (only if not root) or create spark user
   if (verbose) console.log({ osInfo });
   // ask for OS user
   const user = await askUser();
@@ -604,14 +604,14 @@ const handleCordovaBuilder = async (user, dryRun) => {
   if (verbose) console.log({ port });
 
   // ask for system service name
-  const osService = expert ? await askOsService() : "saltcorn";
+  const osService = expert ? await askOsService() : "spark";
   if (verbose) console.log({ osService });
 
   // install system pkg
   await installSystemPackages(osInfo, user, db, mode, port, dryRun);
 
-  // global saltcorn install
-  await installSaltcorn(osInfo, user, db, mode, port, dryRun);
+  // global spark install
+  await installSpark(osInfo, user, db, mode, port, dryRun);
 
   const session_secret = gen_password();
 
@@ -619,7 +619,7 @@ const handleCordovaBuilder = async (user, dryRun) => {
 
   // if sqlite, save cfg & exit
   if (db === "sqlite") {
-    const dbdir = envPaths("saltcorn", { suffix: "" }).data;
+    const dbdir = envPaths("spark", { suffix: "" }).data;
     const dbPath = path.join(dbdir, "scdb.sqlite");
     await fs.promises.mkdir(dbdir, {
       recursive: true,
@@ -685,9 +685,9 @@ const handleCordovaBuilder = async (user, dryRun) => {
   //systemd unit
   if (!dryRun)
     fs.writeFileSync(
-      "/tmp/saltcorn.service",
+      "/tmp/spark.service",
       `[Unit]
-Description=saltcorn
+Description=spark
 Documentation=https://saltcorn.com
 After=network.target
 
@@ -706,7 +706,7 @@ WantedBy=multi-user.target`
   await asyncSudo(
     [
       "mv",
-      "/tmp/saltcorn.service",
+      "/tmp/spark.service",
       `${
         isRedHat(osInfo) || osInfo.distro.includes("SUSE")
           ? `/etc/systemd/system`
@@ -718,12 +718,12 @@ WantedBy=multi-user.target`
   );
   if (isRedHat(osInfo)) {
     await asyncSudo(
-      ["chown", "root:root", "/etc/systemd/system/saltcorn.service"],
+      ["chown", "root:root", "/etc/systemd/system/spark.service"],
       false,
       dryRun
     );
     await asyncSudo(
-      ["restorecon", "-v", "/etc/systemd/system/saltcorn.service"],
+      ["restorecon", "-v", "/etc/systemd/system/spark.service"],
       false,
       dryRun
     );
@@ -734,7 +734,7 @@ WantedBy=multi-user.target`
         "-a",
         "-t",
         "bin_t",
-        "/home/saltcorn/.local/lib/node_modules/@saltcorn/cli/bin.*",
+        "/home/spark/.local/lib/node_modules/@saltcorn/cli/bin.*",
       ],
       false,
       dryRun
@@ -747,7 +747,7 @@ WantedBy=multi-user.target`
         "system_u",
         "-t",
         "bin_t",
-        "/home/saltcorn/.local/lib/node_modules/@saltcorn/cli/bin",
+        "/home/spark/.local/lib/node_modules/@saltcorn/cli/bin",
       ],
       false,
       dryRun
@@ -757,7 +757,7 @@ WantedBy=multi-user.target`
         "restorecon",
         "-R",
         "-v",
-        "/home/saltcorn/.local/lib/node_modules/@saltcorn/cli/bin",
+        "/home/spark/.local/lib/node_modules/@saltcorn/cli/bin",
       ],
       false,
       dryRun
